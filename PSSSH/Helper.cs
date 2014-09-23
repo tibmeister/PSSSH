@@ -120,7 +120,7 @@ namespace PSSSH
 
             return objSession;
         }
-
+        /*
         public static SFTPSession AddToSFTPSessionCollection(SftpClient sftpclient, SessionState pssession)
         {
             //Set initial variables
@@ -148,5 +148,6 @@ namespace PSSSH
             pssession.PSVariable.Set((new PSVariable("Global:SFTPSessions", sftpSessions, ScopedItemOptions.AllScope)));
             return objSession;
         }
+        */
     }
 }

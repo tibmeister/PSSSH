@@ -83,7 +83,7 @@ namespace PSSSH
 
         //Proxy Server to use
         private String _proxyserver = "";
-
+        /*
         [Parameter(Mandatory = false,
             ValueFromPipelineByPropertyName = true,
             ParameterSetName = "NoKey")]
@@ -95,11 +95,11 @@ namespace PSSSH
             get { return _proxyserver; }
             set { _proxyserver = value; }
         }
-
+        */
 
         // Proxy Port
         private Int32 _proxyport = 8080;
-
+        /*
         [Parameter(Mandatory = false,
             ValueFromPipelineByPropertyName = true,
             ParameterSetName = "NoKey")]
@@ -111,8 +111,8 @@ namespace PSSSH
             get { return _proxyport; }
             set { _proxyport = value; }
         }
-
-
+        */
+        /*
         // Proxy Credentials
         [Parameter(Mandatory = false,
             ValueFromPipelineByPropertyName = true,
@@ -126,11 +126,12 @@ namespace PSSSH
             get { return _proxycredential; }
             set { _proxycredential = value; }
         }
+        */
         private PSCredential _proxycredential;
 
         // Proxy Type
         private string _proxytype = "HTTP";
-
+        /*
         [ValidateSet("HTTP", "Socks4", "Socks5", IgnoreCase = true)]
         [Parameter(Mandatory = false,
             ValueFromPipelineByPropertyName = true,
@@ -143,7 +144,7 @@ namespace PSSSH
             get { return _proxytype; }
             set { _proxytype = value; }
         }
-
+        */
         //SSH Key File
         private String _keyfile = "";
 
@@ -513,7 +514,7 @@ namespace PSSSH
 
         } // End process record
     } //end of the class for the New-SSHSession
-
+    /*
     [Cmdlet(VerbsCommon.New, "SFTPSession", DefaultParameterSetName = "NoKey")]
     public class NewSftpSession : PSCmdlet
     {
@@ -995,7 +996,7 @@ namespace PSSSH
         }
 
     } //end of the class for the New-SFTPSession
-
+    */
     //SSH Session Object
     public class SSHSession
     {
@@ -1020,6 +1021,7 @@ namespace PSSSH
         }
     }
 
+    /*
     //SFTP Session Object
     public class SFTPSession
     {
@@ -1041,4 +1043,5 @@ namespace PSSSH
             SFTPSess.Connect();
         }
     }
+    */
 }
