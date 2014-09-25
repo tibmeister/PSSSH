@@ -214,10 +214,18 @@ namespace PSSSH
         {
             if (_keyfile.Equals(""))
             {
-                //###########################################
-                //### Connect using Username and Password ###
-                //###########################################
+                //Username authentication
                 var kIconnectInfo = new KeyboardInteractiveAuthenticationMethod(_credential.GetNetworkCredential().UserName);
+
+                //found a problem where domain name wasn't passed when using the format of {domain}\{username}
+                //So, if he domain exists, prefix it properly
+                //If using {username}@{domain}, this is not an issue
+
+                if(_credential.GetNetworkCredential().Domain.Length > 0)
+                {
+                    kIconnectInfo = new KeyboardInteractiveAuthenticationMethod(_credential.GetNetworkCredential().Domain + "\\" + _credential.GetNetworkCredential().UserName);
+                }
+
                 foreach (var computer in _computername)
                 {
                     ConnectionInfo connectInfo;
@@ -241,6 +249,14 @@ namespace PSSSH
 
                         var passconnectInfo = new PasswordAuthenticationMethod(_credential.GetNetworkCredential().UserName, _credential.GetNetworkCredential().Password);
 
+                        //found a problem where domain name wasn't passed when using the format of {domain}\{username}
+                        //So, if he domain exists, prefix it properly
+                        //If using {username}@{domain}, this is not an issue
+                        if (_credential.GetNetworkCredential().Domain.Length > 0)
+                        {
+                            passconnectInfo = new PasswordAuthenticationMethod(_credential.GetNetworkCredential().Domain + "\\" + _credential.GetNetworkCredential().UserName, _credential.GetNetworkCredential().Password);
+                        }
+
                         WriteVerbose("Connecting to " + computer + " with user " + _credential.GetNetworkCredential().UserName);
                         connectInfo = new ConnectionInfo(computer,
                             _port,
@@ -252,9 +268,6 @@ namespace PSSSH
                             _proxycredential.GetNetworkCredential().Password,
                             kIconnectInfo,
                             passconnectInfo);
-
-
-
                     }
                     else
                     {
@@ -262,17 +275,25 @@ namespace PSSSH
                         // Connection info for Keyboard Interactive
 
                         var passconnectInfo = new PasswordAuthenticationMethod(_credential.GetNetworkCredential().UserName, _credential.GetNetworkCredential().Password);
+                        if(_credential.GetNetworkCredential().Domain.Length > 0)
+                        {
+                            passconnectInfo = new PasswordAuthenticationMethod(_credential.GetNetworkCredential().Domain + "\\" + _credential.GetNetworkCredential().UserName, _credential.GetNetworkCredential().Password);
+                        }
 
-
-                        WriteVerbose("Connecting to " + computer + " with user " + _credential.GetNetworkCredential().UserName);
+                        if (_credential.GetNetworkCredential().Domain.Length > 0)
+                        {
+                            WriteVerbose("Connecting to " + computer + " with user " + _credential.GetNetworkCredential().Domain + "\\" + _credential.GetNetworkCredential().UserName);
+                        }
+                        else
+                        {
+                            WriteVerbose("Connecting to " + computer + " with user " + _credential.GetNetworkCredential().UserName);
+                        }
+                        
                         connectInfo = new ConnectionInfo(computer,
                                     _port,
                                     _credential.GetNetworkCredential().UserName,
                                     passconnectInfo,
                                     kIconnectInfo);
-
-
-                        //} // End foroeach computer
                     }
 
                     // Event Handler for interactive Authentication
@@ -299,14 +320,17 @@ namespace PSSSH
                             sb.AppendFormat("{0:x}:", b);
                         }
                         string fingerPrint = sb.ToString().Remove(sb.ToString().Length - 1);
-                        //this.Host.UI.WriteVerboseLine("Key algorithm of " + Client.ConnectionInfo.CurrentHostKeyAlgorithm);
-                        //this.Host.UI.WriteVerboseLine("Key exchange alhorithm " + Client.ConnectionInfo.CurrentKeyExchangeAlgorithm);
-                        //this.Host.UI.WriteVerboseLine("Host key fingerprint: " + FingerPrint);
+                        
+                        WriteVerbose("Key algorithm of " + client.ConnectionInfo.CurrentHostKeyAlgorithm);
+                        WriteVerbose("Key exchange alhorithm " + client.ConnectionInfo.CurrentKeyExchangeAlgorithm);
+                        WriteVerbose("Host key fingerprint: " + fingerPrint);
+
                         if (_sshHostKeys.ContainsKey(computer1))
                         {
                             if (_sshHostKeys[computer1] == fingerPrint)
                             {
-                                //this.Host.UI.WriteVerboseLine("Fingerprint matched trusted fingerpring for host " + computer);
+                                WriteVerbose("Fingerprint matched trusted fingerpring for host " + computer);
+
                                 e.CanTrust = true;
                             }
                             else
@@ -334,7 +358,8 @@ namespace PSSSH
                             if (choice == 0)
                             {
                                 var keymng = new TrustedKeyManagement();
-                                //this.Host.UI.WriteVerboseLine("Saving fingerprint " + FingerPrint + " for host " + computer);
+                                
+                                WriteVerbose("Saving fingerprint " + fingerPrint + " for host " + computer);
                                 keymng.SetKey(computer1, fingerPrint);
                                 e.CanTrust = true;
                             }
@@ -344,6 +369,7 @@ namespace PSSSH
                             }
                         }
                     };
+
                     // Set the connection timeout
                     client.ConnectionInfo.Timeout = TimeSpan.FromSeconds(_connectiontimeout);
 
@@ -357,9 +383,7 @@ namespace PSSSH
             }
             else
             {
-                //##########################
-                //### Connect using Keys ###
-                //##########################
+                //Use SSH Key for authentication
 
                 WriteVerbose("Using SSH Key authentication for connection.");
                 var fullPath = Path.GetFullPath(_keyfile);
@@ -424,21 +448,25 @@ namespace PSSSH
                         else
                         {
                             WriteVerbose("Using SSH Key authentication for connection.");
+
                             if (_credential.GetNetworkCredential().Password == "")
                             {
                                 WriteVerbose("Using key with no passphrase.");
+                            
                                 var sshkey = new PrivateKeyFile(File.OpenRead(@fullPath));
                                 connectionInfo = new PrivateKeyConnectionInfo(computer, _credential.GetNetworkCredential().UserName, sshkey);
                             }
                             else
                             {
                                 WriteVerbose("Using key with passphrase.");
+                                
                                 var sshkey = new PrivateKeyFile(File.OpenRead(@fullPath), _credential.GetNetworkCredential().Password);
                                 connectionInfo = new PrivateKeyConnectionInfo(computer, _credential.GetNetworkCredential().UserName, sshkey);
                             }
 
 
                         }
+
                         //Ceate instance of SSH Client with connection info
                         var client = new SshClient(connectionInfo);
 
@@ -447,17 +475,20 @@ namespace PSSSH
                         client.HostKeyReceived += delegate(object sender, HostKeyEventArgs e)
                         {
                             var sb = new StringBuilder();
+                        
                             foreach (var b in e.FingerPrint)
                             {
                                 sb.AppendFormat("{0:x}:", b);
                             }
+                            
                             string fingerPrint = sb.ToString().Remove(sb.ToString().Length - 1);
 
                             if (_sshHostKeys.ContainsKey(computer1))
                             {
                                 if (_sshHostKeys[computer1] == fingerPrint)
                                 {
-                                    //this.Host.UI.WriteVerboseLine("Fingerprint matched trusted fingerpring for host " + computer);
+                                    WriteVerbose("Fingerprint matched trusted fingerpring for host " + computer);
+
                                     e.CanTrust = true;
                                 }
                                 else
@@ -485,7 +516,8 @@ namespace PSSSH
                                 if (choice == 0)
                                 {
                                     var keymng = new TrustedKeyManagement();
-                                    //this.Host.UI.WriteVerboseLine("Saving fingerprint " + FingerPrint + " for host " + computer);
+
+                                    WriteVerbose("Saving fingerprint " + fingerPrint + " for host " + computer);
                                     keymng.SetKey(computer1, fingerPrint);
                                     e.CanTrust = true;
                                 }
@@ -495,6 +527,7 @@ namespace PSSSH
                                 }
                             }
                         };
+
                         // Set the connection timeout
                         client.ConnectionInfo.Timeout = TimeSpan.FromSeconds(_connectiontimeout);
 
@@ -504,16 +537,17 @@ namespace PSSSH
                         // Connect to  host using Connection info
                         client.Connect();
                         WriteObject(SSHModuleHelper.AddToSSHSessionCollection(client, SessionState), true);
-                    } // for each computer
-                } // file exists
+
+                    }
+                }
                 else
                 {
                     throw new FileNotFoundException("Key file " + fullPath + " was not found.");
                 }
             }
 
-        } // End process record
-    } //end of the class for the New-SSHSession
+        }
+    }
     /*
     [Cmdlet(VerbsCommon.New, "SFTPSession", DefaultParameterSetName = "NoKey")]
     public class NewSftpSession : PSCmdlet

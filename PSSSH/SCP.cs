@@ -817,9 +817,28 @@ namespace PSSSH
                     {
                         #region No Proxy
                         WriteVerbose("Using Username and Password authentication for connection.");
+
                         // Connection info for Keyboard Interactive
                         kIconnectInfo = new KeyboardInteractiveAuthenticationMethod(_credential.GetNetworkCredential().UserName);
+
+                        //found a problem where domain name wasn't passed when using the format of {domain}\{username}
+                        //So, if he domain exists, prefix it properly
+                        //If using {username}@{domain}, this is not an issue
+
+                        if (_credential.GetNetworkCredential().Domain.Length > 0)
+                        {
+                            kIconnectInfo = new KeyboardInteractiveAuthenticationMethod(_credential.GetNetworkCredential().Domain + "\\" + _credential.GetNetworkCredential().UserName);
+                        }
+
                         var passconnectInfo = new PasswordAuthenticationMethod(_credential.GetNetworkCredential().UserName, _credential.GetNetworkCredential().Password);
+
+                        //found a problem where domain name wasn't passed when using the format of {domain}\{username}
+                        //So, if he domain exists, prefix it properly
+                        //If using {username}@{domain}, this is not an issue
+                        if (_credential.GetNetworkCredential().Domain.Length > 0)
+                        {
+                            passconnectInfo = new PasswordAuthenticationMethod(_credential.GetNetworkCredential().Domain + "\\" + _credential.GetNetworkCredential().UserName, _credential.GetNetworkCredential().Password);
+                        }
 
                         WriteVerbose("Connecting to " + computer + " with user " + _credential.GetNetworkCredential().UserName);
                         connectInfo = new ConnectionInfo(computer,
@@ -829,7 +848,7 @@ namespace PSSSH
                             kIconnectInfo);
 
                         #endregion
-                    }// No Proxy
+                    }
 
                     // Event Handler for interactive Authentication
                     kIconnectInfo.AuthenticationPrompt += delegate(object sender, AuthenticationPromptEventArgs e)
@@ -840,6 +859,7 @@ namespace PSSSH
                                 prompt.Response = _credential.GetNetworkCredential().Password;
                         }
                     };
+
                     //Ceate instance of SCP Client with connection info
                     var client = new ScpClient(connectInfo);
 
@@ -858,7 +878,7 @@ namespace PSSSH
                         {
                             if (_sshHostKeys[computer1] == fingerPrint)
                             {
-                                //this.Host.UI.WriteVerboseLine("Fingerprint matched trusted fingerpring for host " + computer);
+                                WriteVerbose("Fingerprint matched trusted fingerpring for host " + computer);
                                 e.CanTrust = true;
                             }
                             else
@@ -879,7 +899,8 @@ namespace PSSSH
                             if (choice == 0)
                             {
                                 var keymng = new TrustedKeyManagement();
-                                //this.Host.UI.WriteVerboseLine("Saving fingerprint " + FingerPrint + " for host " + computer);
+                                
+                                WriteVerbose("Saving fingerprint " + fingerPrint + " for host " + computer);
                                 keymng.SetKey(computer1, fingerPrint);
                                 e.CanTrust = true;
                             }
@@ -912,6 +933,7 @@ namespace PSSSH
                             Host.UI.WriteProgress(1, progressRecord);
                         }
                     };
+
                     WriteVerbose("Connection succesfull");
                     var localfullPath = Path.GetFullPath(_localfile);
 
@@ -922,14 +944,12 @@ namespace PSSSH
                     client.Download(_remotefile, fil);
 
                     client.Disconnect();
-                } //end foreach computer
+                }
                     #endregion
-            } //Use/Password Auth
+            }
             else
             {
-                //##########################
-                //### Connect using Keys ###
-                //##########################
+                //Use SSH Keys
 
                 WriteVerbose("Using SSH Key authentication for connection.");
                 var fullPath = Path.GetFullPath(_keyfile);
@@ -1036,7 +1056,7 @@ namespace PSSSH
                             {
                                 if (_sshHostKeys[computer1] == fingerPrint)
                                 {
-                                    //this.Host.UI.WriteVerboseLine("Fingerprint matched trusted fingerpring for host " + computer);
+                                    WriteVerbose("Fingerprint matched trusted fingerpring for host " + computer);
                                     e.CanTrust = true;
                                 }
                                 else
@@ -1104,18 +1124,16 @@ namespace PSSSH
                         client.Disconnect();
                     }
 
-                }// file exist
+                }
                 else
                 {
                     throw new FileNotFoundException("Key file " + fullPath + " was not found.");
                 }
             }
 
-        } // End process record
+        }
 
-    } //end of the class for the Get-SCPFile
-    ////###################################################
-
+    }
 
     [Cmdlet(VerbsCommon.Get, "SCPFolder", DefaultParameterSetName = "NoKey")]
     public class GetScpFolder : PSCmdlet
@@ -1169,7 +1187,6 @@ namespace PSSSH
             get { return _port; }
             set { _port = value; }
         }
-
 
         //Proxy Server to use
         [Parameter(Mandatory = false,
