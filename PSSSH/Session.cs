@@ -1,4 +1,4 @@
-﻿/*
+/*
  This file is part of PSSSH.
 
     PSSSH is free software: you can redistribute it and/or modify
@@ -30,7 +30,7 @@ namespace PSSSH
     [Cmdlet(VerbsCommon.New, "SSHSession", DefaultParameterSetName = "NoKey")]
     public class NewSshSession : PSCmdlet
     {
-        // Hosts tp conect to
+        // Hosts to connect to
         [ValidateNotNullOrEmpty]
         [Parameter(Mandatory = true,
             ValueFromPipelineByPropertyName = true,
@@ -215,16 +215,21 @@ namespace PSSSH
             if (_keyfile.Equals(""))
             {
                 //Username authentication
-                var kIconnectInfo = new KeyboardInteractiveAuthenticationMethod(_credential.GetNetworkCredential().UserName);
-
-                //found a problem where domain name wasn't passed when using the format of {domain}\{username}
+				//found a problem where domain name wasn't passed when using the format of {domain}\{username}
                 //So, if he domain exists, prefix it properly
                 //If using {username}@{domain}, this is not an issue
-
-                if(_credential.GetNetworkCredential().Domain.Length > 0)
-                {
-                    kIconnectInfo = new KeyboardInteractiveAuthenticationMethod(_credential.GetNetworkCredential().Domain + "\\" + _credential.GetNetworkCredential().UserName);
-                }
+				string _UserNameMod="";
+				
+				if(_credential.GetNetworkCredential().Domain.Length > 0)
+				{
+					_UserNameMod = _credential.GetNetworkCredential().Domain + "\\" + _credential.GetNetworkCredential().UserName;
+				}
+				else
+				{
+					_UserNameMod = _credential.GetNetworkCredential().UserName;
+				}
+				
+                var kIconnectInfo = new KeyboardInteractiveAuthenticationMethod(_UserNameMod);
 
                 foreach (var computer in _computername)
                 {
@@ -233,7 +238,7 @@ namespace PSSSH
                     {
                         // Set the proper proxy type
                         var ptype = ProxyTypes.Http;
-                        WriteVerbose("A Proxy Server has been specified");
+                        //WriteVerbose("A Proxy Server has been specified");
                         switch (_proxytype)
                         {
                             case "HTTP":
@@ -247,17 +252,9 @@ namespace PSSSH
                                 break;
                         }
 
-                        var passconnectInfo = new PasswordAuthenticationMethod(_credential.GetNetworkCredential().UserName, _credential.GetNetworkCredential().Password);
+                        var passconnectInfo = new PasswordAuthenticationMethod(_UserNameMod, _credential.GetNetworkCredential().Password);
 
-                        //found a problem where domain name wasn't passed when using the format of {domain}\{username}
-                        //So, if he domain exists, prefix it properly
-                        //If using {username}@{domain}, this is not an issue
-                        if (_credential.GetNetworkCredential().Domain.Length > 0)
-                        {
-                            passconnectInfo = new PasswordAuthenticationMethod(_credential.GetNetworkCredential().Domain + "\\" + _credential.GetNetworkCredential().UserName, _credential.GetNetworkCredential().Password);
-                        }
-
-                        WriteVerbose("Connecting to " + computer + " with user " + _credential.GetNetworkCredential().UserName);
+                        WriteVerbose("Connecting to " + computer + " with user " + _UserNameMod);
                         connectInfo = new ConnectionInfo(computer,
                             _port,
                             _credential.GetNetworkCredential().UserName,
@@ -271,27 +268,13 @@ namespace PSSSH
                     }
                     else
                     {
-                        WriteVerbose("Using Username and Password authentication for connection.");
                         // Connection info for Keyboard Interactive
 
-                        var passconnectInfo = new PasswordAuthenticationMethod(_credential.GetNetworkCredential().UserName, _credential.GetNetworkCredential().Password);
-                        if(_credential.GetNetworkCredential().Domain.Length > 0)
-                        {
-                            passconnectInfo = new PasswordAuthenticationMethod(_credential.GetNetworkCredential().Domain + "\\" + _credential.GetNetworkCredential().UserName, _credential.GetNetworkCredential().Password);
-                        }
-
-                        if (_credential.GetNetworkCredential().Domain.Length > 0)
-                        {
-                            WriteVerbose("Connecting to " + computer + " with user " + _credential.GetNetworkCredential().Domain + "\\" + _credential.GetNetworkCredential().UserName);
-                        }
-                        else
-                        {
-                            WriteVerbose("Connecting to " + computer + " with user " + _credential.GetNetworkCredential().UserName);
-                        }
-                        
+                        var passconnectInfo = new PasswordAuthenticationMethod(_UserNameMod, _credential.GetNetworkCredential().Password);
+                                                
                         connectInfo = new ConnectionInfo(computer,
                                     _port,
-                                    _credential.GetNetworkCredential().UserName,
+                                    _UserNameMod,
                                     passconnectInfo,
                                     kIconnectInfo);
                     }
@@ -321,15 +304,15 @@ namespace PSSSH
                         }
                         string fingerPrint = sb.ToString().Remove(sb.ToString().Length - 1);
                         
-                        WriteVerbose("Key algorithm of " + client.ConnectionInfo.CurrentHostKeyAlgorithm);
-                        WriteVerbose("Key exchange alhorithm " + client.ConnectionInfo.CurrentKeyExchangeAlgorithm);
-                        WriteVerbose("Host key fingerprint: " + fingerPrint);
+                        //WriteVerbose("Key algorithm of " + client.ConnectionInfo.CurrentHostKeyAlgorithm);
+                        //WriteVerbose("Key exchange alhorithm " + client.ConnectionInfo.CurrentKeyExchangeAlgorithm);
+                        //WriteVerbose("Host key fingerprint: " + fingerPrint);
 
                         if (_sshHostKeys.ContainsKey(computer1))
                         {
                             if (_sshHostKeys[computer1] == fingerPrint)
                             {
-                                WriteVerbose("Fingerprint matched trusted fingerpring for host " + computer);
+                                //WriteVerbose("Fingerprint matched trusted fingerpring for host " + computer);
 
                                 e.CanTrust = true;
                             }
@@ -359,7 +342,7 @@ namespace PSSSH
                             {
                                 var keymng = new TrustedKeyManagement();
                                 
-                                WriteVerbose("Saving fingerprint " + fingerPrint + " for host " + computer);
+                                //WriteVerbose("Saving fingerprint " + fingerPrint + " for host " + computer);
                                 keymng.SetKey(computer1, fingerPrint);
                                 e.CanTrust = true;
                             }
@@ -377,6 +360,7 @@ namespace PSSSH
                     client.KeepAliveInterval = TimeSpan.FromSeconds(_keepaliveinterval);
 
                     // Connect to  host using Connection info
+					WriteVerbose("Connecting to " + computer + " with user " + _UserNameMod);
                     client.Connect();
                     WriteObject(SSHModuleHelper.AddToSSHSessionCollection(client, SessionState), true);
                 }
@@ -385,7 +369,7 @@ namespace PSSSH
             {
                 //Use SSH Key for authentication
 
-                WriteVerbose("Using SSH Key authentication for connection.");
+                //WriteVerbose("Using SSH Key authentication for connection.");
                 var fullPath = Path.GetFullPath(_keyfile);
                 if (File.Exists(fullPath))
                 {
@@ -396,7 +380,7 @@ namespace PSSSH
                         {
                             // Set the proper proxy type
                             var ptype = ProxyTypes.Http;
-                            WriteVerbose("A Proxy Server has been specified");
+                            //WriteVerbose("A Proxy Server has been specified");
                             switch (_proxytype)
                             {
                                 case "HTTP":
@@ -412,13 +396,13 @@ namespace PSSSH
 
                             if (_credential.GetNetworkCredential().Password == "")
                             {
-                                WriteVerbose("Using key with no passphrase.");
+                                //WriteVerbose("Using key with no passphrase.");
                                 var sshkey = new PrivateKeyFile(File.OpenRead(@fullPath));
                                 connectionInfo = new PrivateKeyConnectionInfo(computer, _port, _credential.GetNetworkCredential().UserName, sshkey);
                             }
                             else
                             {
-                                WriteVerbose("Using key with passphrase.");
+                                //WriteVerbose("Using key with passphrase.");
                                 var sshkey = new PrivateKeyFile(File.OpenRead(@fullPath), _credential.GetNetworkCredential().Password);
 
                                 if (_proxycredential.UserName == "")
@@ -447,18 +431,18 @@ namespace PSSSH
                         }
                         else
                         {
-                            WriteVerbose("Using SSH Key authentication for connection.");
+                            //WriteVerbose("Using SSH Key authentication for connection.");
 
                             if (_credential.GetNetworkCredential().Password == "")
                             {
-                                WriteVerbose("Using key with no passphrase.");
+                                //WriteVerbose("Using key with no passphrase.");
                             
                                 var sshkey = new PrivateKeyFile(File.OpenRead(@fullPath));
                                 connectionInfo = new PrivateKeyConnectionInfo(computer, _credential.GetNetworkCredential().UserName, sshkey);
                             }
                             else
                             {
-                                WriteVerbose("Using key with passphrase.");
+                                //WriteVerbose("Using key with passphrase.");
                                 
                                 var sshkey = new PrivateKeyFile(File.OpenRead(@fullPath), _credential.GetNetworkCredential().Password);
                                 connectionInfo = new PrivateKeyConnectionInfo(computer, _credential.GetNetworkCredential().UserName, sshkey);
@@ -487,7 +471,7 @@ namespace PSSSH
                             {
                                 if (_sshHostKeys[computer1] == fingerPrint)
                                 {
-                                    WriteVerbose("Fingerprint matched trusted fingerpring for host " + computer);
+                                    //WriteVerbose("Fingerprint matched trusted fingerpring for host " + computer);
 
                                     e.CanTrust = true;
                                 }
@@ -517,7 +501,7 @@ namespace PSSSH
                                 {
                                     var keymng = new TrustedKeyManagement();
 
-                                    WriteVerbose("Saving fingerprint " + fingerPrint + " for host " + computer);
+                                    //WriteVerbose("Saving fingerprint " + fingerPrint + " for host " + computer);
                                     keymng.SetKey(computer1, fingerPrint);
                                     e.CanTrust = true;
                                 }
@@ -751,7 +735,7 @@ namespace PSSSH
                     {
                         // Set the proper proxy type
                         var ptype = ProxyTypes.Http;
-                        WriteVerbose("A Proxy Server has been specified");
+                        //WriteVerbose("A Proxy Server has been specified");
                         switch (_proxytype)
                         {
                             case "HTTP":
@@ -767,7 +751,7 @@ namespace PSSSH
 
                         var passconnectInfo = new PasswordAuthenticationMethod(_credential.GetNetworkCredential().UserName, _credential.GetNetworkCredential().Password);
 
-                        WriteVerbose("Connecting to " + computer + " with user " + _credential.GetNetworkCredential().UserName);
+                        //WriteVerbose("Connecting to " + computer + " with user " + _credential.GetNetworkCredential().UserName);
                         connectInfo = new ConnectionInfo(computer,
                             _port,
                             _credential.GetNetworkCredential().UserName,
@@ -784,13 +768,13 @@ namespace PSSSH
                     }
                     else
                     {
-                        WriteVerbose("Using Username and Password authentication for connection.");
+                        //WriteVerbose("Using Username and Password authentication for connection.");
                         // Connection info for Keyboard Interactive
 
                         var passconnectInfo = new PasswordAuthenticationMethod(_credential.GetNetworkCredential().UserName, _credential.GetNetworkCredential().Password);
 
 
-                        WriteVerbose("Connecting to " + computer + " with user " + _credential.GetNetworkCredential().UserName);
+                        //WriteVerbose("Connecting to " + computer + " with user " + _credential.GetNetworkCredential().UserName);
                         connectInfo = new ConnectionInfo(computer,
                             _port,
                             _credential.GetNetworkCredential().UserName,
@@ -880,7 +864,7 @@ namespace PSSSH
                 //### Connect using Keys ###
                 //##########################
 
-                WriteVerbose("Using SSH Key authentication for connection.");
+                //WriteVerbose("Using SSH Key authentication for connection.");
                 var fullPath = Path.GetFullPath(_keyfile);
                 if (File.Exists(fullPath))
                 {
@@ -891,7 +875,7 @@ namespace PSSSH
                         {
                             // Set the proper proxy type
                             var ptype = ProxyTypes.Http;
-                            WriteVerbose("A Proxy Server has been specified");
+                            //WriteVerbose("A Proxy Server has been specified");
                             switch (_proxytype)
                             {
                                 case "HTTP":
@@ -907,13 +891,13 @@ namespace PSSSH
 
                             if (_credential.GetNetworkCredential().Password == "")
                             {
-                                WriteVerbose("Using key with no passphrase.");
+                                //WriteVerbose("Using key with no passphrase.");
                                 var sshkey = new PrivateKeyFile(File.OpenRead(@fullPath));
                                 connectionInfo = new PrivateKeyConnectionInfo(computer, _credential.GetNetworkCredential().UserName, sshkey);
                             }
                             else
                             {
-                                WriteVerbose("Using key with passphrase.");
+                                //WriteVerbose("Using key with passphrase.");
                                 var sshkey = new PrivateKeyFile(File.OpenRead(@fullPath), _credential.GetNetworkCredential().Password);
 
                                 if (_proxycredential.UserName == "")
@@ -942,16 +926,16 @@ namespace PSSSH
                         }
                         else
                         {
-                            WriteVerbose("Using SSH Key authentication for connection.");
+                            //WriteVerbose("Using SSH Key authentication for connection.");
                             if (_credential.GetNetworkCredential().Password == "")
                             {
-                                WriteVerbose("Using key with no passphrase.");
+                                //WriteVerbose("Using key with no passphrase.");
                                 var sshkey = new PrivateKeyFile(File.OpenRead(@fullPath));
                                 connectionInfo = new PrivateKeyConnectionInfo(computer, _credential.GetNetworkCredential().UserName, sshkey);
                             }
                             else
                             {
-                                WriteVerbose("Using key with passphrase.");
+                                //WriteVerbose("Using key with passphrase.");
                                 var sshkey = new PrivateKeyFile(File.OpenRead(@fullPath), _credential.GetNetworkCredential().Password);
                                 connectionInfo = new PrivateKeyConnectionInfo(computer, _credential.GetNetworkCredential().UserName, sshkey);
                             }
@@ -976,7 +960,7 @@ namespace PSSSH
                             {
                                 if (_sshHostKeys[computer1] == fingerPrint)
                                 {
-                                    //this.Host.UI.WriteVerboseLine("Fingerprint matched trusted fingerpring for host " + computer);
+                                    //WriteVerbose("Fingerprint matched trusted fingerpring for host " + computer);
                                     e.CanTrust = true;
                                 }
                                 else
