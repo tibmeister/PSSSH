@@ -112,8 +112,10 @@ namespace PSSSH
             set { _proxyport = value; }
         }
         */
-        /*
+        
         // Proxy Credentials
+        private PSCredential _proxycredential;
+
         [Parameter(Mandatory = false,
             ValueFromPipelineByPropertyName = true,
             ParameterSetName = "NoKey")]
@@ -126,12 +128,11 @@ namespace PSSSH
             get { return _proxycredential; }
             set { _proxycredential = value; }
         }
-        */
-        private PSCredential _proxycredential;
+        
 
         // Proxy Type
         private string _proxytype = "HTTP";
-        /*
+        
         [ValidateSet("HTTP", "Socks4", "Socks5", IgnoreCase = true)]
         [Parameter(Mandatory = false,
             ValueFromPipelineByPropertyName = true,
@@ -144,7 +145,7 @@ namespace PSSSH
             get { return _proxytype; }
             set { _proxytype = value; }
         }
-        */
+        
         //SSH Key File
         private String _keyfile = "";
 
@@ -216,7 +217,7 @@ namespace PSSSH
             {
                 //Username authentication
 				//found a problem where domain name wasn't passed when using the format of {domain}\{username}
-                //So, if he domain exists, prefix it properly
+                //So, if the domain exists, prefix it properly
                 //If using {username}@{domain}, this is not an issue
 				string _UserNameMod="";
 				
@@ -360,7 +361,7 @@ namespace PSSSH
                     client.KeepAliveInterval = TimeSpan.FromSeconds(_keepaliveinterval);
 
                     // Connect to  host using Connection info
-					WriteVerbose("Connecting to " + computer + " with user " + _UserNameMod);
+					//WriteVerbose("Connecting to " + computer + " with user " + _UserNameMod);
                     client.Connect();
                     WriteObject(SSHModuleHelper.AddToSSHSessionCollection(client, SessionState), true);
                 }
@@ -369,7 +370,7 @@ namespace PSSSH
             {
                 //Use SSH Key for authentication
 
-                //WriteVerbose("Using SSH Key authentication for connection.");
+                WriteVerbose("Using SSH Key authentication for connection.");
                 var fullPath = Path.GetFullPath(_keyfile);
                 if (File.Exists(fullPath))
                 {
@@ -396,13 +397,13 @@ namespace PSSSH
 
                             if (_credential.GetNetworkCredential().Password == "")
                             {
-                                //WriteVerbose("Using key with no passphrase.");
+                                WriteVerbose("Using key with no passphrase.");
                                 var sshkey = new PrivateKeyFile(File.OpenRead(@fullPath));
                                 connectionInfo = new PrivateKeyConnectionInfo(computer, _port, _credential.GetNetworkCredential().UserName, sshkey);
                             }
                             else
                             {
-                                //WriteVerbose("Using key with passphrase.");
+                                WriteVerbose("Using key with passphrase.");
                                 var sshkey = new PrivateKeyFile(File.OpenRead(@fullPath), _credential.GetNetworkCredential().Password);
 
                                 if (_proxycredential.UserName == "")
@@ -431,18 +432,18 @@ namespace PSSSH
                         }
                         else
                         {
-                            //WriteVerbose("Using SSH Key authentication for connection.");
+                            WriteVerbose("Using SSH Key authentication for connection.");
 
                             if (_credential.GetNetworkCredential().Password == "")
                             {
-                                //WriteVerbose("Using key with no passphrase.");
+                                WriteVerbose("Using key with no passphrase.");
                             
                                 var sshkey = new PrivateKeyFile(File.OpenRead(@fullPath));
                                 connectionInfo = new PrivateKeyConnectionInfo(computer, _credential.GetNetworkCredential().UserName, sshkey);
                             }
                             else
                             {
-                                //WriteVerbose("Using key with passphrase.");
+                                WriteVerbose("Using key with passphrase.");
                                 
                                 var sshkey = new PrivateKeyFile(File.OpenRead(@fullPath), _credential.GetNetworkCredential().Password);
                                 connectionInfo = new PrivateKeyConnectionInfo(computer, _credential.GetNetworkCredential().UserName, sshkey);
@@ -1026,7 +1027,7 @@ namespace PSSSH
             get { return SSHSess.IsConnected; }
         }
 
-        // Method for Connecing
+        // Method for Connecting
         public void Connect()
         {
             SSHSess.Connect();

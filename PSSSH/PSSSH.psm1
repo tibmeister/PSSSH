@@ -91,7 +91,7 @@ function Remove-SSHSession
              { 
                 $badsession.session.Disconnect() 
              }
-             $badsession.session.Dispose()
+             #$badsession.session.Dispose()
              $global:SSHSessions.Remove($badsession)
              Write-Verbose "Session $($badsession.index) Removed"
         }
@@ -118,8 +118,8 @@ function Remove-SSHSession
              { 
                 $badsession.session.Disconnect() 
              }
-             $badsession.session.Dispose()
-             $Global:SSHSessions.Remove($badsession)
+             
+			 $Global:SSHSessions.Remove($badsession)
              Write-Verbose "Session $($badsession.index) Removed"
         }
     }
