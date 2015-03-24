@@ -22,3 +22,15 @@ To install this module, place it either in the **System PowerShell Modules** dir
 ```powershell
 Import-Module PSSSH
 ```
+
+Usage
+=====
+Just like any PowerShell module or commandlet, using 
+```powershell
+Get-Help {Commandlet}
+```
+will show the in-line documentation.  You can also run 
+```powershell
+Get-Command -Module PSSSH
+```
+to list all the command the module provides.
